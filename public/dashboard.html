@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FarmConnect - Dashboard</title>
+<style>
+  /* Basic Reset */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f7f9;
+    display: flex;
+    min-height: 100vh;
+  }
+  /* Sidebar */
+  .sidebar {
+    width: 250px;
+    background-color:#4CAF50;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
+  .sidebar h2 { margin-bottom: 20px; font-weight: 700; }
+  .sidebar .profile-info p { margin: 8px 0; }
+  .sidebar nav { margin-top: 40px; flex-grow: 1; }
+  .sidebar nav a {
+    color: white; text-decoration: none; display: block;
+    padding: 12px 15px; border-radius: 5px; margin-bottom: 10px;
+    transition: background-color 0.3s ease;
+  }
+  .sidebar nav a:hover { background-color: #3e8e41; }
+  .sidebar nav a.logout {
+    margin-top: auto; background-color: #e74c3c;
+  }
+  .sidebar nav a.logout:hover { background-color: #c0392b; }
+  /* Main content */
+  .main-content { flex-grow: 1; padding: 30px; }
+  .main-content h1 { margin-bottom: 25px; color: #3e8e41; }
+  /* Products grid */
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 25px;
+  }
+  .product-card {
+    background: white; border-radius: 10px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    padding: 15px; display: flex; flex-direction: column;
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+  .product-card:hover { transform: translateY(-5px); }
+  .product-images {
+    display: flex; overflow-x: auto; gap: 10px; margin-bottom: 15px;
+  }
+  .product-images img {
+    height: 150px; border-radius: 8px; object-fit: cover;
+    flex-shrink: 0; width: 100%; max-width: 150px;
+  }
+  .product-info h3 { color: #27ae60; margin-bottom: 8px; }
+  .product-info p { color: #555; margin-bottom: 4px; }
+  .product-info .price { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; }
+  .product-images::-webkit-scrollbar { height: 8px; }
+  .product-images::-webkit-scrollbar-thumb {
+    background-color: rgba(39, 174, 96, 0.6); border-radius: 4px;
+  }
+  /* Floating Add Button */
+  .add-btn {
+    position: fixed; bottom: 30px; right: 30px;
+    background-color: #4CAF50; color: white;
+    border: none; border-radius: 50%;
+    width: 60px; height: 60px; font-size: 32px;
+    cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: background 0.3s;
+  }
+  .add-btn:hover { background-color: #3e8e41; }
+  /* Icons container (edit + delete) */
+  .icons-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.3s ease, transform 0.2s ease;
+  }
+  .product-card:hover .icons-container {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: white;
+    font-size: 16px;
+    transition: background 0.3s;
+  }
+  .icon-btn.edit-btn { background-color: rgba(76, 175, 80, 0.9); }
+  .icon-btn.edit-btn:hover { background-color: #388e3c; }
+  .icon-btn.delete-btn { background-color: #e74c3c; }
+  .icon-btn.delete-btn:hover { background-color: #c0392b; }
+  /* Modal (shared) */
+  .modal {
+    display: none; position: fixed; z-index: 1000;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+    justify-content: center; align-items: center;
+  }
+  .modal-content {
+    background: white; padding: 20px; border-radius: 10px;
+    width: 400px; max-width: 90%;
+  }
+  .modal-content h2 { margin-bottom: 15px; color: #3e8e41; }
+  .modal-content label { display: block; margin-top: 10px; }
+  .modal-content input, .modal-content textarea {
+    width: 100%; padding: 8px; margin-top: 5px;
+    border: 1px solid #ccc; border-radius: 5px;
+  }
+  .modal-actions {
+    margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;
+  }
+  .modal-actions button {
+    padding: 8px 15px; border: none; border-radius: 5px;
+    cursor: pointer;
+  }
+  .modal-actions .post { background: #4CAF50; color: white; }
+  .modal-actions .cancel { background: #ccc; }
+  /* Password Modal */
+  .password-modal { max-width: 450px; border-top: 5px solid #4CAF50; }
+  .password-modal h2 { text-align: center; font-weight: 700; margin-bottom: 20px; color: #2e7d32; }
+  .password-modal input { border: 1px solid #ddd; transition: all 0.3s ease; }
+  .password-modal input:focus { border-color: #4CAF50; outline: none; box-shadow: 0 0 6px rgba(76, 175, 80, 0.4); }
+  .password-modal .post { background: linear-gradient(135deg, #43a047, #66bb6a); font-weight: 600; }
+  .password-modal .post:hover { background: linear-gradient(135deg, #388e3c, #4caf50); }
+  .password-modal .cancel { background: #eee; color: #333; }
+  .password-modal .cancel:hover { background: #ddd; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <h2>Dashboard</h2>
+  <div class="profile-info">
+    <p><strong>Name:</strong> <span id="userName">Loading...</span></p>
+    <p><strong>Email:</strong> <span id="userEmail">Loading...</span></p>
+    <p><strong>Phone:</strong> <span id="userPhone">Loading...</span></p>
+    <p><strong>District:</strong> <span id="userDistrict">Loading...</span></p>
+  </div>
+  <nav>
+    <a href="/home">Home</a>
+    <a href="/profile.html">Profile</a>
+    <a href="/orders.html">Orders</a>
+    <a href="/report.html">Report</a>
+    <a href="#" id="changePasswordLink">Change Password</a>
+    <a href="#" class="logout" id="logoutBtn">Logout</a>
+  </nav>
+</div>
+<div class="main-content">
+  <h1>Your Products</h1>
+  <div class="products-grid" id="productsGrid"></div>
+</div>
+<!-- Floating Add Button -->
+<button class="add-btn" id="addProductBtn">+</button>
+<!-- Add Product Modal -->
+<div class="modal" id="productModal">
+  <div class="modal-content">
+    <h2>Add New Product</h2>
+    <form id="productForm" enctype="multipart/form-data">
+      <label>Product Name</label>
+      <input type="text" name="product_name" required />
+      <label>Quantity (kg)</label>
+      <input type="number" name="quantity" min="1" required />
+      <label>Price per kg (₹)</label>
+      <input type="number" name="price" min="1" required />
+      <label>Product Image</label>
+      <input type="file" name="product_image" accept="image/*" required />
+      <label>Description</label>
+      <textarea name="description" rows="3"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="cancel" id="cancelModal">Cancel</button>
+        <button type="submit" class="post">Post</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Edit Product Modal -->
+<div class="modal" id="editProductModal">
+  <div class="modal-content">
+    <h2>Edit Product</h2>
+    <form id="editProductForm" enctype="multipart/form-data">
+      <input type="hidden" name="product_id" />
+      <label>Product Name</label>
+      <input type="text" name="product_name" required />
+      <label>Quantity (kg)</label>
+      <input type="number" name="quantity" min="1" required />
+      <label>Price per kg (₹)</label>
+      <input type="number" name="price" min="1" required />
+      <label>Replace Image (optional)</label>
+      <input type="file" name="product_image" accept="image/*" />
+      <label>Description</label>
+      <textarea name="description" rows="3"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="cancel" id="cancelEditModal">Cancel</button>
+        <button type="submit" class="post">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Change Password Modal -->
+<div class="modal" id="passwordModal">
+  <div class="modal-content password-modal">
+    <h2>Change Password</h2>
+    <form id="passwordForm">
+      <label>Current Password</label>
+      <input type="password" name="old_password" required />
+      <label>New Password</label>
+      <input type="password" name="new_password" required />
+      <label>Confirm New Password</label>
+      <input type="password" name="confirm_password" required />
+      <div class="modal-actions">
+        <button type="button" class="cancel" id="cancelPasswordModal">Cancel</button>
+        <button type="submit" class="post">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/user', { method:'GET', credentials:'include' });
+    if (res.status === 401) { window.location.href = '/login.html'; return; }
+    const data = await res.json();
+    if (!data.success) { alert(data.message); return; }
+    document.getElementById('userName').textContent = data.user.full_name;
+    document.getElementById('userEmail').textContent = data.user.email;
+    document.getElementById('userPhone').textContent = data.user.phone || '-';
+    document.getElementById('userDistrict').textContent = data.user.district || '-';
+    const container = document.getElementById('productsGrid');
+    container.innerHTML = '';
+    if (data.products.length === 0) { container.innerHTML = '<p>No products posted yet.</p>'; return; }
+    data.products.forEach(product => {
+      const card = document.createElement('div'); card.className = 'product-card';
+      const imagesDiv = document.createElement('div'); imagesDiv.className = 'product-images';
+      if (!product.images || product.images.length === 0) {
+        const img = document.createElement('img'); img.src = '/images/no-image.png'; img.alt = 'No image';
+        imagesDiv.appendChild(img);
+      } else {
+        product.images.forEach(url => {
+          const img = document.createElement('img'); img.src = url; img.alt = product.product_name;
+          imagesDiv.appendChild(img);
+        });
+      }
+      const infoDiv = document.createElement('div'); infoDiv.className = 'product-info';
+      infoDiv.innerHTML = `<h3>${product.product_name}</h3>
+                           <p class="price">₹${product.price}</p>
+                           <p>Quantity: ${product.quantity} kg</p>
+                           <p>${product.description || ''}</p>`;
+      // Icons container
+      const iconsContainer = document.createElement('div'); iconsContainer.className = 'icons-container';
+      const editIcon = document.createElement('div'); editIcon.className = 'icon-btn edit-btn';
+      editIcon.innerHTML = '✏️'; editIcon.onclick = () => openEditModal(product);
+      const deleteIcon = document.createElement('div'); deleteIcon.className = 'icon-btn delete-btn';
+      deleteIcon.innerHTML = '🗑️'; deleteIcon.onclick = () => deleteProduct(product);
+      iconsContainer.appendChild(editIcon); iconsContainer.appendChild(deleteIcon);
+      card.appendChild(iconsContainer);
+      card.appendChild(imagesDiv); card.appendChild(infoDiv);
+      container.appendChild(card);
+    });
+  } catch(err){ console.error(err); alert('Error loading dashboard'); }
+}
+// Logout
+document.getElementById('logoutBtn').addEventListener('click', async e=>{
+  e.preventDefault(); if(!confirm('Logout?')) return;
+  await fetch('/api/auth/logout', {method:'POST', credentials:'include'});
+  window.location.href = '/login.html';
+});
+// Add Product
+const modal = document.getElementById('productModal');
+document.getElementById('addProductBtn').onclick = () => modal.style.display='flex';
+document.getElementById('cancelModal').onclick = () => modal.style.display='none';
+document.getElementById('productForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const res = await fetch('/api/products/add', { method:'POST', credentials:'include', body: formData });
+  const data = await res.json();
+  if(data.success){ alert('Product added'); modal.style.display='none'; loadDashboard(); }
+  else alert(data.message);
+});
+// Edit Product
+const editModal = document.getElementById('editProductModal');
+document.getElementById('cancelEditModal').onclick = () => editModal.style.display='none';
+function openEditModal(product){
+  const form = document.getElementById('editProductForm');
+  form.product_id.value = product.id;
+  form.product_name.value = product.product_name;
+  form.quantity.value = product.quantity;
+  form.price.value = product.price;
+  form.description.value = product.description || '';
+  editModal.style.display='flex';
+}
+document.getElementById('editProductForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const res = await fetch('/api/products/update', { method:'POST', credentials:'include', body: formData });
+  const data = await res.json();
+  if(data.success){ alert('Product updated'); editModal.style.display='none'; loadDashboard(); }
+  else alert(data.message);
+});
+// Delete Product
+async function deleteProduct(product){
+  if(!confirm(`Delete ${product.product_name}?`)) return;
+  try {
+    const res = await fetch(`/api/products/delete/${product.id}`, { method:'DELETE', credentials:'include' });
+    const data = await res.json();
+    if(data.success) alert('Product deleted'); else alert(data.message);
+    loadDashboard();
+  } catch(err){ console.error(err); alert('Error deleting product'); }
+}
+// Change Password
+const passwordModal = document.getElementById('passwordModal');
+document.getElementById('changePasswordLink').onclick = e=>{ e.preventDefault(); passwordModal.style.display='flex'; }
+document.getElementById('cancelPasswordModal').onclick = ()=> passwordModal.style.display='none';
+document.getElementById('passwordForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  if(f.get('new_password')!==f.get('confirm_password')){ alert('Passwords do not match'); return; }
+  const res = await fetch('/api/auth/change-password', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ old_password:f.get('old_password'), new_password:f.get('new_password') })
+  });
+  const data = await res.json();
+  if(data.success){ alert('Password changed'); passwordModal.style.display='none'; e.target.reset(); }
+  else alert(data.message);
+});
+window.onload = loadDashboard;
+</script>
+</body>
+</html>

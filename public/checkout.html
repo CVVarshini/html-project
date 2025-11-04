@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FarmConnect - Checkout</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7f9;
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 250px;
+      background-color: #4CAF50;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    .sidebar h2 { margin-bottom: 20px; font-weight: 700; }
+    .sidebar nav { margin-top: 40px; flex-grow: 1; }
+    .sidebar nav a {
+      color: white; text-decoration: none;
+      display: block; padding: 12px 15px;
+      border-radius: 5px; margin-bottom: 10px;
+      transition: background-color 0.3s ease;
+    }
+    .sidebar nav a:hover { background-color: #3e8e41; }
+    .sidebar nav a.logout { margin-top: auto; background-color: #e74c3c; }
+    .sidebar nav a.logout:hover { background-color: #c0392b; }
+    .main-content { flex-grow: 1; padding: 30px; }
+    .main-content h1 { margin-bottom: 20px; color: #3e8e41; }
+    .checkout-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      padding: 30px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .product-summary {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .product-summary img {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-right: 20px;
+    }
+    .product-summary .info h3 { color: #27ae60; margin-bottom: 8px; }
+    .product-summary .info p { color: #555; margin-bottom: 4px; }
+    .product-summary .info .price { font-weight: bold; color: #e67e22; }
+    .order-form h2 { margin-bottom: 20px; color: #3e8e41; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    .form-group textarea { height: 100px; resize: vertical; }
+    .payment-method {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .payment-method h3 { margin-bottom: 10px; color: #3e8e41; }
+    .payment-method p { color: #555; }
+    .place-order-btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .place-order-btn:hover { background: #3e8e41; }
+    .total-cost {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #e67e22;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>FarmConnect</h2>
+    <nav>
+      <a href="/home.html"><i class="fas fa-home"></i> Home</a>
+      <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="/profile.html"><i class="fas fa-user"></i> Profile</a>
+      <a href="/orders.html"><i class="fas fa-box"></i> Orders</a>
+      <a href="/cart.html"><i class="fas fa-shopping-cart"></i> Cart</a>
+      <a href="#" class="logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
+  </div>
+  <div class="main-content">
+    <h1>Checkout</h1>
+    <div class="checkout-container">
+      <div class="product-summary">
+        <img id="productImage" src="/images/no-image.png" alt="Product Image">
+        <div class="info">
+          <h3 id="productName">Loading...</h3>
+          <p id="productPrice">₹0/Kg</p>
+          <p id="productQuantity">Available: <span id="availableQuantity">0</span>Kg</p>
+        </div>
+      </div>
+      <div class="total-cost" id="totalCost">Total: ₹0</div>
+      <form id="orderForm">
+        <div class="order-form">
+          <h2>Order Details</h2>
+          <div class="form-group">
+            <label>Quantity (Kg)</label>
+            <select id="quantity" required onchange="updateTotal()">
+              <option value="">Select Quantity</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="fullName" required>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="phone" required>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <textarea id="address" required></textarea>
+          </div>
+          <div class="payment-method">
+            <h3>Payment Method</h3>
+            <p>Cash on Delivery (COD) is the only available payment method.</p>
+          </div>
+          <button type="submit" class="place-order-btn">Place Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('product');
+    if (!productId) {
+      alert("No product selected!");
+      window.location.href = "/home.html";
+    }
+    let product;
+    let user;
+
+    function updateTotal() {
+      const quantity = document.getElementById('quantity').value;
+      if (quantity && product) {
+        const total = product.price * parseInt(quantity);
+        document.getElementById('totalCost').textContent = `Total: ₹${total}`;
+      }
+    }
+
+    async function loadUser() {
+      try {
+        const res = await fetch('/api/user', {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Failed to load user details: ' + data.message);
+          window.location.href = '/login.html';
+          return;
+        }
+        user = data.user;
+        document.getElementById('fullName').value = user.full_name;
+        document.getElementById('phone').value = user.phone;
+      } catch (error) {
+        console.error('Error loading user:', error);
+        alert('Failed to load user details. Please try again.');
+        window.location.href = '/login.html';
+      }
+    }
+
+    async function loadProduct() {
+      try {
+        const res = await fetch(`/api/products/${productId}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        if (!data.success) {
+          alert('Failed to load product: ' + data.message);
+          window.location.href = '/home.html';
+          return;
+        }
+        product = data.product;
+        document.getElementById('productName').textContent = product.product_name;
+        document.getElementById('productPrice').textContent = `₹${product.price}/Kg`;
+        document.getElementById('availableQuantity').textContent = product.quantity;
+        if (product.images && product.images.length > 0) {
+          document.getElementById('productImage').src = product.images[0];
+        }
+        // Populate quantity dropdown
+        const quantitySelect = document.getElementById('quantity');
+        quantitySelect.innerHTML = '<option value="">Select Quantity</option>';
+        for (let i = 1; i <= product.quantity; i++) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = `${i} Kg`;
+          quantitySelect.appendChild(option);
+        }
+      } catch (error) {
+        console.error('Error loading product:', error);
+        alert('Failed to load product. Please try again.');
+        window.location.href = '/home.html';
+      }
+    }
+
+    document.getElementById('orderForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const quantity = document.getElementById('quantity').value;
+      const address = document.getElementById('address').value;
+      if (!quantity) {
+        alert('Please select a quantity.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/orders/place', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: productId,
+            quantity: parseInt(quantity),
+            fullName: user.full_name,
+            phone: user.phone,
+            address: address,
+            paymentMethod: 'COD'
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Order placed successfully!');
+          window.location.href = '/orders.html';
+        } else {
+          alert('Failed to place order: ' + data.message);
+        }
+      } catch (error) {
+        console.error('Error placing order:', error);
+        alert('Failed to place order. Please try again.');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!confirm('Are you sure you want to logout?')) return;
+      try {
+        const res = await fetch('/logout', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Logged out successfully!');
+          window.location.href = '/login.html';
+        } else {
+          alert('Logout failed: ' + data.message);
+        }
+      } catch {
+        alert('Logout failed. Please try again.');
+      }
+    });
+
+    window.onload = function() {
+      loadUser();
+      loadProduct();
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+</body>
+</html>

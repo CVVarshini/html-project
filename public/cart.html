@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FarmConnect - Cart</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7f9;
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 250px;
+      background-color: #4CAF50;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    .sidebar h2 { margin-bottom: 20px; font-weight: 700; }
+    .sidebar nav { margin-top: 40px; flex-grow: 1; }
+    .sidebar nav a {
+      color: white; text-decoration: none;
+      display: block; padding: 12px 15px;
+      border-radius: 5px; margin-bottom: 10px;
+      transition: background-color 0.3s ease;
+    }
+    .sidebar nav a:hover { background-color: #3e8e41; }
+    .sidebar nav a.logout { margin-top: auto; background-color: #e74c3c; }
+    .sidebar nav a.logout:hover { background-color: #c0392b; }
+    .sidebar nav a.active {
+      background-color: #3e8e41;
+    }
+    .main-content { flex-grow: 1; padding: 30px; }
+    .main-content h1 { margin-bottom: 15px; color: #3e8e41; }
+    .cart-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      padding: 25px;
+    }
+    .cart-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-item img {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-right: 15px;
+    }
+    .cart-info {
+      flex-grow: 1;
+    }
+    .cart-info h3 {
+      color: #27ae60;
+      margin-bottom: 8px;
+    }
+    .cart-info p {
+      color: #555;
+      margin-bottom: 5px;
+    }
+    .cart-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn {
+      padding: 8px 15px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+    .buy-btn {
+      background: #27ae60;
+      color: white;
+    }
+    .buy-btn:hover {
+      background: #219150;
+    }
+    .remove-btn {
+      background: #e74c3c;
+      color: white;
+    }
+    .remove-btn:hover {
+      background: #c0392b;
+    }
+    .empty-cart {
+      text-align: center;
+      padding: 40px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>FarmConnect</h2>
+    <nav>
+      <a href="/home.html"><i class="fas fa-home"></i> Home</a>
+      <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="/profile.html"><i class="fas fa-user"></i> Profile</a>
+      <a href="/orders.html"><i class="fas fa-box"></i> Orders</a>
+      <a href="/cart.html" class="active"><i class="fas fa-shopping-cart"></i> Cart</a>
+      <a href="#" class="logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
+  </div>
+  <div class="main-content">
+    <h1>Your Cart</h1>
+    <div class="cart-container" id="cartContainer">
+      <!-- Cart items will be loaded here -->
+    </div>
+  </div>
+  <script>
+    async function loadCart() {
+      try {
+        const res = await fetch('/api/cart', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        if (res.status === 401) {
+          alert('Please log in to view your cart.');
+          window.location.href = '/login.html';
+          return;
+        }
+        const data = await res.json();
+        if (data.success) {
+          renderCart(data.cart);
+        } else {
+          document.getElementById('cartContainer').innerHTML =
+            `<div class="empty-cart">
+              <p>Your cart is empty</p>
+              <p><a href="/home.html">Continue shopping</a></p>
+            </div>`;
+        }
+      } catch (error) {
+        console.error('Error loading cart:', error);
+        document.getElementById('cartContainer').innerHTML =
+          `<div class="empty-cart">
+            <p>Error loading cart. Please try again.</p>
+          </div>`;
+      }
+    }
+
+    function renderCart(cart) {
+      const container = document.getElementById('cartContainer');
+      if (!cart || cart.length === 0) {
+        container.innerHTML =
+          `<div class="empty-cart">
+            <p>Your cart is empty</p>
+            <p><a href="/home.html">Continue shopping</a></p>
+          </div>`;
+        return;
+      }
+      let html = '';
+      cart.forEach(item => {
+        html += `
+          <div class="cart-item" data-id="${item.cart_item_id}">
+            <img src="${item.image_url || '/images/no-image.png'}" alt="${item.product_name}">
+            <div class="cart-info">
+              <h3>${item.product_name}</h3>
+              <p>₹${item.price}/Kg</p>
+              <p>Quantity: ${item.quantity} Kg</p>
+              <p>Posted by: ${item.user_name || 'Unknown'}</p>
+            </div>
+            <div class="cart-actions">
+              <button class="btn buy-btn" onclick="buyNow(${item.product_id})">Buy</button>
+              <button class="btn remove-btn" onclick="removeFromCart(${item.cart_item_id})">Remove</button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function buyNow(productId) {
+      if (!productId) {
+        alert("Product ID is missing!");
+        return;
+      }
+      window.location.href = `/checkout.html?product=${productId}`;
+    }
+
+    async function removeFromCart(cartItemId) {
+      try {
+        const res = await fetch('/api/cart/remove', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartItemId: cartItemId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadCart();
+        } else {
+          alert('Failed to remove item: ' + data.message);
+          if (data.message.includes('Unauthorized')) {
+            window.location.href = '/login.html';
+          }
+        }
+      } catch (error) {
+        console.error('Error removing item:', error);
+        alert('Failed to remove item. Please try again.');
+      }
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!confirm('Are you sure you want to logout?')) return;
+      try {
+        const res = await fetch('/logout', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Logged out successfully!');
+          window.location.href = '/login.html';
+        } else {
+          alert('Logout failed: ' + data.message);
+        }
+      } catch {
+        alert('Logout failed. Please try again.');
+      }
+    });
+
+    window.onload = loadCart;
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+</body>
+</html>

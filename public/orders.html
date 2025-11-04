@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FarmConnect - Your Orders</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      display: flex;
+      min-height: 100vh;
+      background-color: #f9f9f9;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: #4CAF50;
+      color: white;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar h1 {
+      font-size: 24px;
+      margin-bottom: 30px;
+      color: white;
+    }
+
+    .sidebar nav {
+      flex-grow: 1;
+    }
+
+    .sidebar nav a {
+      color: white;
+      text-decoration: none;
+      display: block;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    .sidebar nav a:hover {
+      background-color: #3e8e41;
+    }
+
+    .sidebar nav a.active {
+      background-color: #2E7D32;
+      font-weight: bold;
+    }
+
+    .sidebar nav a.logout {
+      margin-top: auto;
+      background-color: #e74c3c;
+    }
+
+    .sidebar nav a.logout:hover {
+      background-color: #c0392b;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex-grow: 1;
+      padding: 30px;
+      background-color: #f5f5f5;
+    }
+
+    .main-content h1 {
+      color: #4CAF50;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+
+    /* Order Card */
+    .order-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .order-id {
+      font-weight: bold;
+      color: #4CAF50;
+      font-size: 18px;
+    }
+
+    .order-date {
+      color: #777;
+      font-size: 14px;
+    }
+
+    .order-status {
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .order-status.pending {
+      background-color: #ffeb3b;
+      color: #888;
+    }
+
+    .order-status.delivered {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .order-status.shipped {
+      background-color: #2196F3;
+      color: white;
+    }
+
+    .order-details {
+      display: flex;
+      gap: 20px;
+    }
+
+    .product-image {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .product-info {
+      flex-grow: 1;
+    }
+
+    .product-name {
+      font-weight: bold;
+      color: #4CAF50;
+      margin-bottom: 5px;
+    }
+
+    .product-price {
+      color: #e67e22;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .product-quantity {
+      color: #777;
+      margin-bottom: 5px;
+    }
+
+    .order-address {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+      color: #555;
+    }
+
+    .order-address h4 {
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    /* Cart Count */
+    .cart-count {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h1>FarmConnect</h1>
+    <nav>
+      <a href="/home.html"><i class="fas fa-home"></i> Home</a>
+      <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="/profile.html"><i class="fas fa-user"></i> Profile</a>
+      <a href="/orders.html" class="active"><i class="fas fa-box"></i> Orders</a>
+      <a href="/cart.html"><i class="fas fa-shopping-cart"></i> Cart</a>
+      <a href="#" class="logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <h1>Your Orders</h1>
+
+    <!-- Orders Container -->
+    <div id="ordersContainer"></div>
+
+    <!-- Cart Count -->
+    <div class="cart-count" id="cartCount">0</div>
+  </div>
+
+  <!-- Font Awesome for icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+  <!-- JavaScript -->
+  <script>
+    // Fetch and render orders
+    async function loadOrders() {
+      try {
+        const res = await fetch("/api/orders", {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (res.status === 401) {
+          alert("Session expired. Please log in again.");
+          window.location.href = "/login.html";
+          return;
+        }
+
+        const data = await res.json();
+        if (data.success) {
+          renderOrders(data.orders);
+        } else {
+          alert("Error loading orders: " + data.message);
+        }
+      } catch (error) {
+        console.error("Failed to load orders:", error);
+        alert("Failed to load orders. Please check your connection.");
+      }
+    }
+
+    // Render orders as cards
+    function renderOrders(orders) {
+      const container = document.getElementById("ordersContainer");
+      container.innerHTML = "";
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #777;">No orders found.</p>';
+        return;
+      }
+
+      orders.forEach((order) => {
+        const orderCard = document.createElement("div");
+        orderCard.className = "order-card";
+
+        const statusClass = order.status.toLowerCase();
+        const statusText = order.status.toUpperCase();
+
+        const productImage = order.product_image || '/images/no-image.png';
+        const totalPrice = order.price * order.quantity;
+
+        orderCard.innerHTML = `
+          <div class="order-header">
+            <div>
+              <div class="order-id">Order #${order.id}</div>
+              <div class="order-date">${new Date(order.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="order-status ${statusClass}">${statusText}</div>
+          </div>
+
+          <div class="order-details">
+            <img src="${productImage}" alt="${order.product_name}" class="product-image" />
+
+            <div class="product-info">
+              <div class="product-name">${order.product_name}</div>
+              <div class="product-price">₹${totalPrice}.00</div>
+              <div class="product-quantity">₹${order.price}/Kg &nbsp;&nbsp; Quantity: ${order.quantity} Kg</div>
+            </div>
+          </div>
+
+          <div class="order-address">
+            <h4>Address:</h4>
+            <p>${order.address}</p>
+          </div>
+        `;
+
+        container.appendChild(orderCard);
+      });
+    }
+
+    // Update cart count
+    async function updateCartCount() {
+      try {
+        const res = await fetch("/api/cart/count", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (res.status === 401) {
+          document.getElementById("cartCount").textContent = "0";
+          document.getElementById("cartCount").onclick = function () {
+            alert("Please log in to view your cart.");
+            window.location.href = "/login.html";
+          };
+          return;
+        }
+
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("cartCount").textContent = data.count;
+          document.getElementById("cartCount").onclick = function () {
+            window.location.href = "/cart.html";
+          };
+        }
+      } catch (error) {
+        console.error("Error updating cart count:", error);
+      }
+    }
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (!confirm("Are you sure you want to logout?")) return;
+
+      try {
+        const res = await fetch("/logout", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert("Logged out successfully!");
+          window.location.href = "/login.html";
+        } else {
+          alert("Logout failed: " + data.message);
+        }
+      } catch {
+        alert("Logout failed. Please try again.");
+      }
+    });
+
+    // Load data on page load
+    window.onload = function () {
+      loadOrders();
+      updateCartCount();
+    };
+  </script>
+</body>
+</html>

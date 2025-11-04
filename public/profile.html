@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FarmConnect - Profile</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7f9;
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 250px; background-color: #4CAF50; color: white;
+      display: flex; flex-direction: column; padding: 20px;
+    }
+    .sidebar h2 { margin-bottom: 20px; font-weight: 700; }
+    .sidebar nav { margin-top: 40px; flex-grow: 1; }
+    .sidebar nav a {
+      color: white; text-decoration: none; display: block;
+      padding: 12px 15px; border-radius: 6px; margin-bottom: 10px;
+      transition: background 0.3s ease;
+    }
+    .sidebar nav a:hover { background: #3e8e41; }
+    .sidebar nav a.logout { margin-top: auto; background-color: #e74c3c; }
+    .sidebar nav a.logout:hover { background-color: #c0392b; }
+    .main-content { flex-grow: 1; padding: 40px; }
+    .main-content h1 { margin-bottom: 25px; color: #3e8e41; }
+    .profile-card {
+      background: #fff; border-radius: 15px; padding: 30px;
+      max-width: 650px; margin: auto;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .profile-header { text-align: center; margin-bottom: 25px; }
+    .profile-photo-container { position: relative; display: inline-block; }
+    .profile-photo {
+      width: 140px; height: 140px; border-radius: 50%;
+      border: 4px solid #27ae60; object-fit: cover;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .upload-btn {
+      display: none;
+    }
+    .profile-header h2 { margin-top: 12px; color: #2c3e50; }
+    .email-text { color: #888; font-size: 0.9rem; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block; margin-bottom: 6px;
+      font-weight: 600; color: #3e8e41;
+    }
+    .form-group input {
+      width: 100%; padding: 12px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 1rem; outline: none;
+      transition: border-color 0.3s ease;
+    }
+    .form-group input:focus { border-color: #27ae60; }
+    .btn {
+      background: #27ae60; color: white; border: none;
+      padding: 12px 20px; border-radius: 8px;
+      font-size: 1rem; cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .btn:hover { background: #219653; }
+    .btn-update {
+      background: #3e8e41; display: block;
+      width: 100%; margin-top: 10px;
+    }
+    .btn-update:hover { background: #2d7030; }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>FarmConnect</h2>
+    <nav>
+      <a href="/home.html">Home</a>
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/profile.html">Profile</a>
+      <a href="#">Orders</a>
+      <a href="#">Settings</a>
+      <a href="#" class="logout" id="logoutBtn">Logout</a>
+    </nav>
+  </div>
+  <!-- Main Content -->
+  <div class="main-content">
+    <h1>Your Profile</h1>
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="profile-photo-container">
+          <img id="profilePhotoPreview" class="profile-photo" alt="Profile Photo">
+        </div>
+        <h2 id="userNameDisplay">Your Name</h2>
+        <p id="userEmailDisplay" class="email-text">your@email.com</p>
+      </div>
+      <form id="profileForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" name="fullName" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" name="phone" required>
+        </div>
+        <div class="form-group">
+          <label for="district">District</label>
+          <input type="text" id="district" name="district" required>
+        </div>
+        <button type="submit" class="btn btn-update">Save Changes</button>
+      </form>
+    </div>
+  </div>
+  <script>
+  async function loadProfile() {
+    try {
+      const res = await fetch('/api/user', { method: 'GET', credentials: 'include' });
+      const data = await res.json();
+      if (!data.success) return alert(data.message);
+      document.getElementById('fullName').value = data.user.full_name;
+      document.getElementById('email').value = data.user.email;
+      document.getElementById('phone').value = data.user.phone;
+      document.getElementById('district').value = data.user.district;
+      document.getElementById('userNameDisplay').textContent = data.user.full_name;
+      document.getElementById('userEmailDisplay').textContent = data.user.email;
+      const photoEl = document.getElementById('profilePhotoPreview');
+      console.log("Profile photo URL:", data.user.profile_photo);
+      if (data.user.profile_photo) {
+        // ✅ Show actual uploaded photo
+        photoEl.src = data.user.profile_photo + '?t=' + new Date().getTime();
+      } else {
+        // ✅ Fallback to inline SVG with initials
+        const initials = data.user.full_name
+          .split(' ')
+          .map(n => n[0].toUpperCase())
+          .join('');
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="140" height="140">
+            <circle cx="70" cy="70" r="70" fill="#27ae60"/>
+            <text x="50%" y="55%" font-size="48" text-anchor="middle" fill="white" dy=".3em">${initials}</text>
+          </svg>
+        `;
+        photoEl.src = "data:image/svg+xml;base64," + btoa(svg);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  // Submit profile form
+  document.getElementById('profileForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const res = await fetch('/api/profile', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
+    const data = await res.json();
+    alert(data.message);
+    if (data.success) {
+      // ✅ force reload profile from backend (so we get new photo URL)
+      setTimeout(loadProfile, 300); // small delay ensures DB commit
+    }
+  });
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async e => {
+    e.preventDefault();
+    const res = await fetch('/logout', { method: 'POST', credentials: 'include' });
+    const data = await res.json();
+    if (data.success) window.location.href = '/login.html';
+  });
+  window.onload = loadProfile;
+  </script>
+</body>
+</html>
